@@ -32,13 +32,13 @@ def deltaLoss(w, x, y):
     x = np.concatenate((x, one), axis = 1)
     return - x / (1 + math.exp(y * np.dot(x, w)))
 
-def loss(w, x, y):
+def logisticLoss(w, x, y):
     x = np.reshape(x, (1, 4))
     one = np.ones((1, 1))
     x = np.concatenate((x, one), axis = 1)
     return math.log(1 + math.exp(- y * np.dot(x, w)))
 
-def bin(w, x, y):
+def binaryLoss(w, x, y):
     x = np.reshape(x, (1, 4))
     one = np.ones((1, 1))
     x = np.concatenate((x, one), axis = 1)
@@ -48,8 +48,8 @@ def bin(w, x, y):
 def check(x, y, w, l):
     err = 0
     for i in xrange(len(y)):
-        if l == 0: err += bin(w, x[i,:], y[i])
-        elif l == 1: err += loss(w, x[i,:], y[i])
+        if l == 0: err += binaryLoss(w, x[i,:], y[i])
+        elif l == 1: err += logisticLoss(w, x[i,:], y[i])
     return err / len(y)
         
 def sgd(x, y, scenario, loss):
