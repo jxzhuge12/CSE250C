@@ -1,6 +1,7 @@
 import numpy as np
 import random
 import math
+import matplotlib.pyplot as plt
 
 ### project funtion
 # project to d-dimension cube
@@ -81,38 +82,50 @@ def sgd(x, y, scenario, loss):
     return np.sum(w, axis = 0) / len(w)
 
 ### experiment function
-def test(sigma, scenario, loss):
+#   scenario: =1: cube, =2: ball
+#   loss: =0: binary error, =1: logistic error
+def test(n, sigma, scenario, loss):
     testx, testy = pointGen(400, sigma, scenario)
-    n = np.array([50, 100, 500, 1000])
-    ex = np.zeros((len(n), 1))
-    std = np.zeros((len(n), 1))
-    for i in xrange(len(n)):
-        # run sgd for 20 times, store error of each time
-        err = np.zeros((20, 1))
-        for j in xrange(20):
-            x, y = pointGen(n[i], sigma, scenario)
-            w = sgd(x, y, scenario, loss)
-            err[j] = check(testx, testy, w, loss)
-        ex[i] = np.mean(err)
-        std[i] = np.std(err)
-    return ex, std
+    # run sgd for 20 times, store error of each time
+    err = np.zeros((20, 1))
+    for i in xrange(20):
+        x, y = pointGen(n, sigma, scenario)
+        w = sgd(x, y, scenario, loss)
+        err[i] = check(testx, testy, w, loss)
+    return np.mean(err), np.std(err)
 
-f = open('data.txt', 'w')
-sigma = np.array([0.05, 0.25])
-for i in xrange(len(sigma)):
-    for scenario in xrange(1, 3):
-        f.write("%d" % scenario)
-        f.write("\n")
-        f.write("%f" % sigma[i])
-        f.write("\n")
-        lossEx, lossStd = test(sigma[i], scenario, 1)
-        lossEx.tofile(f, sep = " ")
-        f.write("\n")
-        lossStd.tofile(f, sep = " ")
-        f.write("\n")
-        binEx, binStd = test(sigma[i], scenario, 0)
-        binEx.tofile(f, sep = " ")
-        f.write("\n")
-        binStd.tofile(f, sep = " ")
-        f.write("\n")
-f.close()
+def experiment(loss):
+    sigma = np.array([0.05, 0.25])
+    n = np.array([50, 100, 500, 1000])
+    plt.figure()
+    if loss == 1:
+        plt.title("Logistic loss result on different scenarios")
+        axes = plt.gca()
+        axes.set_xlim([25, 1025])
+        axes.set_ylim([0, 1])
+    elif loss == 0:
+        plt.title("Binary Classfication error on different scenarios")
+        axes = plt.gca()
+        axes.set_xlim([25,1025])
+        axes.set_ylim([-0.1,0.6])
+    for i in xrange(len(sigma)):
+        for scenario in xrange(1, 3):
+            error = np.zeros((2, len(n)))
+            for k in xrange(len(n)):
+                error[0][k], error[1][k] = test(n[k], sigma[i], scenario, loss)
+            print error
+            print "Scenario: {}, sigma: {}".format(scenario, sigma[i])
+            print "Average: {}".format(sum(error[0])/len(error[0]))
+            if i == 0 and scenario == 1:
+                plt.errorbar(n, error[0], error[1], ls="--", label = "sigma = 0.05,cube")
+            elif i == 1 and scenario == 1:
+                plt.errorbar(n, error[0], error[1], ls="-", label = "sigma = 0.25,cube")
+            elif i == 0 and scenario == 2:
+                plt.errorbar(n, error[0], error[1], ls="-.", label = "sigma = 0.05,ball")
+            elif i == 1 and scenario == 2:
+                plt.errorbar(n, error[0], error[1], ls=":", label = "sigma = 0.25,ball")
+    plt.legend()
+    plt.show()
+
+experiment(1)
+experiment(0)
