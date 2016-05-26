@@ -37,14 +37,16 @@ import matplotlib.pyplot as plt
 def cubeProjection(point):
     # for each entry of the point, project it into 1 or -1 based on its distance to 1 and -1
     for i in xrange(len(point)):
-        if np.sign(point[i]) >= 0: point[i] = 1
-        else: point[i] = -1
+        if point[i] > 1: point[i] = 1
+        elif point[i] < -1: point[i] = -1
     return point
 
 #   project to d-dimension unit ball
 def ballProjection(point):
     # divide each entry of the point by the euclidean distance of the point
-    return point / np.linalg.norm(point)
+    if np.linalg.norm(point) > 1:
+        point / np.linalg.norm(point)
+    return point 
     
 ### generate samples
 #   input:  n: sample size
@@ -117,8 +119,8 @@ def check(x, y, w, l):
 ### Stochastic Gradient Descent Algorithm
 #   input:
 #       scenario == 1: cube, == 2: ball
-#       loss == 0: binary error, == 1: logistic error
-def sgd(x, y, scenario, loss):
+#       for cube and ball have different learning rate
+def sgd(x, y, scenario):
     # store all of w
     w = np.zeros((len(y) + 1, x.shape[1] + 1))
     # current w
@@ -131,66 +133,134 @@ def sgd(x, y, scenario, loss):
         w[i + 1,:] = wt.T[:]
     return np.sum(w, axis = 0) / len(w)
 
-### test function
-#   n: sample size
-#   sigma: variance
-#   scenario == 1: cube, == 2: ball
-#   loss == 0: binary error, == 1: logistic error
-def test(n, sigma, scenario, loss):    
+
+### test performance of sgd on test set 
+#   input:
+#       n: training sample size
+#       sigma: variance
+#       scenario == 1: cube, == 2: ball
+#   output: 
+#       bianry error mean, std
+#       logistic loss mean, std
+def test(testx, testy, n, sigma, scenario):    
     # run sgd for 20 times, store test error into err
-    err = np.zeros((20, 1))
+    err0 = np.zeros((20, 1))
+    err1 = np.zeros((20, 1))
     for i in xrange(20):
         # generate n points
         x, y = pointGen(n, sigma, scenario)
         # calculate w using sgd method
-        w = sgd(x, y, scenario, loss)
+        w = sgd(x, y, scenario)
         # check error rate on test points using w
-        err[i] = check(testx, testy, w, loss)
+        err0[i] = check(testx, testy, w, 0)
+        err1[i] = check(testx, testy, w, 1)
     # return mean and standard deviation of error rates
-    return np.mean(err), np.std(err)
+    return np.mean(err0), np.std(err0), np.mean(err1), np.std(err1)
     
-### experiment function
-#   loss == 0: binary error, == 1: logistic error
-def experiment(loss):
-    sigma = np.array([0.05, 0.25])
-    n = np.array([50, 100, 500, 1000])
-    # begin plot
-    plt.figure()
-    if loss == 1:
-        plt.title("Logistic loss result on different scenarios")
-        axes = plt.gca()
-        axes.set_xlim([25, 1025])
-        axes.set_ylim([0, 1])
-    elif loss == 0:
-        plt.title("Binary Classfication error on different scenarios")
-        axes = plt.gca()
-        axes.set_xlim([25,1025])
-        axes.set_ylim([-0.1,0.6])
-    for i in xrange(len(sigma)):
-        for scenario in xrange(1, 3):
-            error = np.zeros((2, len(n)))
-            for k in xrange(len(n)):
-                # test based on each sample size, variance, scenario and loss function
-                error[0][k], error[1][k] = test(n[k], sigma[i], scenario, loss)
-            print error
-            print "Scenario: {}, sigma: {}".format(scenario, sigma[i])
-            print "Average: {}".format(sum(error[0])/len(error[0]))
-            # plot different line based on different configuration
-            if i == 0 and scenario == 1:
-                plt.errorbar(n, error[0], error[1], ls="--", label = "sigma = 0.05,cube")
-            elif i == 1 and scenario == 1:
-                plt.errorbar(n, error[0], error[1], ls="-", label = "sigma = 0.25,cube")
-            elif i == 0 and scenario == 2:
-                plt.errorbar(n, error[0], error[1], ls="-.", label = "sigma = 0.05,ball")
-            elif i == 1 and scenario == 2:
-                plt.errorbar(n, error[0], error[1], ls=":", label = "sigma = 0.25,ball")
-    plt.legend()
-    plt.show()
-    # end plot
 
-# generate 400 test points
-testx, testy = pointGen(400, sigma, scenario)
-# experiment based on logistic error function
-experiment(1)
-# experiment based on binary error function
-experiment(0)
+
+### do experiment 
+#   We will do following experiments:
+#   Scenario ==1, cube:
+#       case 1: sigma = 0.05, logistic loss(loss == 0)
+#       case 2: sigma = 0.05, binary error(loss == 1)
+#       case 3: sigma = 0.25, logistic loss(loss == 0)
+#       case 3: sigma = 0.25, binary error(loss == 1)
+#   Scenario == 2, ball:
+#       case 1: sigma = 0.05, logistic loss(loss == 0)
+#       case 2: sigma = 0.05, binary error(loss == 1)
+#       case 3: sigma = 0.25, logistic loss(loss == 0)
+#       case 3: sigma = 0.25, binary error(loss == 1)
+#   Return: errorAvg, errorStd in the following cases
+def experiment():
+    # for each cases, run SGD algorithm on different size
+    n = np.array([50, 100, 500, 1000])
+    sigma = np.array([0.05, 0.25])
+    errorAvg = np.zeros((8, 4))
+    errorStd = np.zeros((8, 4))
+    idx = 0
+    # do experiments on two scenarios: cube and ball:
+    for scenario in xrange(1, 3):
+        # for each case, do experiments on different sigma:
+        for i in xrange(len(sigma)):
+            # generate test sample points
+            testx, testy = pointGen(400, sigma[i], scenario)
+            # run SGD algorithm on different training size
+            for k in xrange(len(n)):
+                errorAvg[idx][k],errorStd[idx][k],errorAvg[idx+1][k],errorStd[idx+1][k]=test(testx, testy, n[k], sigma[i], scenario)
+            idx += 2
+    return errorAvg, errorStd
+
+errorAvg, errorStd = experiment()
+print errorAvg
+print errorStd
+
+n = np.array([50, 100, 500, 1000])
+plt.figure(1)
+plt.subplot(221)
+axes = plt.gca()
+axes.set_xlim([25, 1025])
+plt.errorbar(n,errorAvg[0], errorStd[0], ls='--', label = "0.05,binary")
+plt.legend()
+plt.subplot(222)
+axes = plt.gca()
+axes.set_xlim([25, 1025])
+plt.errorbar(n,errorAvg[1], errorStd[1], ls='--', label = "0.05,logistic")
+plt.legend()
+plt.subplot(223)
+axes = plt.gca()
+axes.set_xlim([25, 1025])
+plt.errorbar(n,errorAvg[2], errorStd[2],ls='--', label = "0.25,binary")
+plt.legend()
+plt.subplot(224)
+axes = plt.gca()
+axes.set_xlim([25, 1025])
+plt.errorbar(n,errorAvg[3], errorStd[3],ls='--', label = "0.25,logistic")
+plt.legend()
+plt.savefig("result_scenario1.png")
+
+plt.figure(2)
+plt.subplot(221)
+axes = plt.gca()
+axes.set_xlim([25, 1025])
+plt.errorbar(n,errorAvg[4], errorStd[4], ls='--', label = "0.05,binary")
+plt.legend()
+plt.subplot(222)
+axes = plt.gca()
+axes.set_xlim([25, 1025])
+plt.errorbar(n,errorAvg[5], errorStd[5], ls='--', label = "0.05,logistic")
+plt.legend()
+plt.subplot(223)
+axes = plt.gca()
+axes.set_xlim([25, 1025])
+plt.errorbar(n,errorAvg[6], errorStd[6],ls='--', label = "0.25,binary")
+plt.legend()
+plt.subplot(224)
+axes = plt.gca()
+axes.set_xlim([25, 1025])
+plt.errorbar(n,errorAvg[7], errorStd[7],ls='--', label = "0.25,logistic")
+plt.legend()
+plt.savefig("result_scenario2.png")
+
+plt.figure(3)
+axes = plt.gca()
+axes.set_xlim([25, 1025])
+plt.errorbar(n, errorAvg[1], errorStd[1], ls='--', label="cube, 0.05, logistic")
+plt.errorbar(n, errorAvg[3], errorStd[3], ls='--', label="cube, 0.25, logistic")
+plt.errorbar(n, errorAvg[5], errorStd[5], ls='--', label="ball, 0.05, logistic")
+plt.errorbar(n, errorAvg[7], errorStd[7], ls='--', label="ball, 0.25, logistic")
+plt.legend()
+plt.title("SGD result comparision under logistic loss")
+plt.savefig("comparision_logistic")
+
+plt.figure(4)
+axes = plt.gca()
+axes.set_xlim([25, 1025])
+plt.errorbar(n, errorAvg[0], errorStd[0], ls='--', label="cube, 0.05, binary")
+plt.errorbar(n, errorAvg[2], errorStd[2], ls='--', label="cube, 0.25, binary")
+plt.errorbar(n, errorAvg[4], errorStd[4], ls='--', label="ball, 0.05, binary")
+plt.errorbar(n, errorAvg[6], errorStd[6], ls='--', label="ball, 0.25, binary")
+plt.legend()
+plt.title("SGD result comparision under binary loss")
+plt.savefig("comparision_binary")
+
