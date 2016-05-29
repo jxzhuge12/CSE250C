@@ -35,7 +35,7 @@ import matplotlib.pyplot as plt
 ### project funtion
 #   project to d-dimension cube
 def cubeProjection(point):
-    # for each entry of the point, project it into 1 or -1 based on its distance to 1 and -1
+    # for each entry of the point, project it into [-1, 1] if the point locates outside [-1, 1]
     for i in xrange(len(point)):
         if point[i] > 1: point[i] = 1
         elif point[i] < -1: point[i] = -1
@@ -43,7 +43,7 @@ def cubeProjection(point):
 
 #   project to d-dimension unit ball
 def ballProjection(point):
-    # divide each entry of the point by the euclidean distance of the point
+    # divide each entry of the point by the euclidean distance of the point if the point locates outside the unit ball
     if np.linalg.norm(point) > 1:
         point / np.linalg.norm(point)
     return point 
@@ -63,11 +63,13 @@ def pointGen(n, sigma, scenario = 0):
             y[i] = 1
             # set mean as (0.25, 0.25, 0.25, 0.25)
             mu = np.array([0.25, 0.25, 0.25, 0.25])
+            # generate point based on mean and cov
             px = np.random.multivariate_normal(mu, np.eye(4) * sigma * sigma)
         else: 
             y[i] = -1
             # set mean as (-0.25, -0.25, -0.25, -0.25)
             mu = np.array([-0.25, -0.25, -0.25, -0.25])
+            # generate point based on mean and cov
             px = np.random.multivariate_normal(mu, np.eye(4) * sigma * sigma)
         # make projection based on different scenario
         if scenario == 1: x[i,:] = cubeProjection(px)
@@ -165,12 +167,12 @@ def test(testx, testy, n, sigma, scenario):
 #       case 1: sigma = 0.05, logistic loss(loss == 0)
 #       case 2: sigma = 0.05, binary error(loss == 1)
 #       case 3: sigma = 0.25, logistic loss(loss == 0)
-#       case 3: sigma = 0.25, binary error(loss == 1)
+#       case 4: sigma = 0.25, binary error(loss == 1)
 #   Scenario == 2, ball:
 #       case 1: sigma = 0.05, logistic loss(loss == 0)
 #       case 2: sigma = 0.05, binary error(loss == 1)
 #       case 3: sigma = 0.25, logistic loss(loss == 0)
-#       case 3: sigma = 0.25, binary error(loss == 1)
+#       case 4: sigma = 0.25, binary error(loss == 1)
 #   Return: errorAvg, errorStd in the following cases
 def experiment():
     # for each cases, run SGD algorithm on different size
@@ -195,6 +197,7 @@ errorAvg, errorStd = experiment()
 print errorAvg
 print errorStd
 
+### draw and save images
 n = np.array([50, 100, 500, 1000])
 plt.figure(1)
 plt.subplot(221)
