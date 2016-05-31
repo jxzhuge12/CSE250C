@@ -45,7 +45,7 @@ def cubeProjection(point):
 def ballProjection(point):
     # divide each entry of the point by the euclidean distance of the point if the point locates outside the unit ball
     if np.linalg.norm(point) > 1:
-        point / np.linalg.norm(point)
+        point = point / np.linalg.norm(point)
     return point 
     
 ### generate samples
@@ -112,9 +112,10 @@ def binaryLoss(w, x, y):
 def check(x, y, w, l):
     err = 0
     # for each test point, check whether it is classified correctly
-    for i in xrange(len(y)):
-        if l == 0: err += binaryLoss(w, x[i,:], y[i])
-        elif l == 1: err += logisticLoss(w, x[i,:], y[i])
+    if l == 0: 
+        for i in xrange(len(y)): err += binaryLoss(w, x[i,:], y[i])
+    elif l == 1: 
+        for i in xrange(len(y)): err += logisticLoss(w, x[i,:], y[i])
     # return error rate
     return err * 1.0 / len(y)
         
@@ -131,7 +132,7 @@ def sgd(x, y, scenario):
     for i in xrange(len(y)):
         g = deltaLoss(wt, x[i], y[i])
         if scenario == 1: wt = cubeProjection(np.subtract(wt, g.T / math.sqrt(i + 1)))
-        elif scenario == 2: wt = ballProjection(np.subtract(wt, g.T / math.sqrt(i + 1) / 2))
+        elif scenario == 2: wt = ballProjection(np.subtract(wt, g.T / math.sqrt(i + 1) / math.sqrt(2)))
         w[i + 1,:] = wt.T[:]
     return np.sum(w, axis = 0) / len(w)
 
