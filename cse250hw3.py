@@ -158,7 +158,7 @@ def test(testx, testy, n, sigma, scenario):
         err0[i] = check(testx, testy, w, 0)
         err1[i] = check(testx, testy, w, 1)
     # return mean and standard deviation of error rates
-    return np.mean(err0), np.std(err0), np.mean(err1), np.std(err1)
+    return np.mean(err0), np.std(err0), min(err0), np.mean(err1), np.std(err1), min(err1)
     
 
 
@@ -181,6 +181,7 @@ def experiment():
     sigma = np.array([0.05, 0.25])
     errorAvg = np.zeros((8, 4))
     errorStd = np.zeros((8, 4))
+    errorMin = np.ones((8, 1))
     idx = 0
     # do experiments on two scenarios: cube and ball:
     for scenario in xrange(1, 3):
@@ -190,8 +191,15 @@ def experiment():
             testx, testy = pointGen(400, sigma[i], scenario)
             # run SGD algorithm on different training size
             for k in xrange(len(n)):
-                errorAvg[idx][k],errorStd[idx][k],errorAvg[idx+1][k],errorStd[idx+1][k]=test(testx, testy, n[k], sigma[i], scenario)
+                errorAvg[idx][k],errorStd[idx][k], tmp1,errorAvg[idx+1][k],errorStd[idx+1][k], tmp2=test(testx, testy, n[k], sigma[i], scenario)
+                if tmp1 < errorMin[idx] : errorMin[idx] = tmp1
+                if tmp2 < errorMin[idx+1] : errorMin[idx+1] = tmp2
             idx += 2
+
+    # calculate excessive error for each case
+    for i in xrange(8):
+        for j in xrange(4):
+            errorAvg[i][j] = errorAvg[i][j] - errorMin[i]
     return errorAvg, errorStd
 
 errorAvg, errorStd = experiment()
